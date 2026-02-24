@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <title>Ragsana</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #101014;
+        }
+        .container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .rose-bg {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(1.1);
+            width: 340px;
+            height: 340px;
+            opacity: 0.18;
+            z-index: 0;
+            pointer-events: none;
+            filter: blur(1px) drop-shadow(0 0 16px #c00);
+            animation: rose-fadein 2.5s cubic-bezier(.4,0,.2,1);
+        }
+        @keyframes rose-fadein {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 0.18; transform: translate(-50%, -50%) scale(1.1); }
+        }
+        .main-text {
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            font-size: 5em;
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: 0.18em;
+            z-index: 1;
+            text-align: center;
+            text-shadow: 0 2px 24px #c00, 0 0 2px #fff;
+            opacity: 0;
+            animation: text-fadein 2.2s 0.5s cubic-bezier(.4,0,.2,1) forwards;
+        }
+        @keyframes text-fadein {
+            from { opacity: 0; filter: blur(8px); }
+            to { opacity: 1; filter: blur(0); }
+        }
+    </style>
+    </style>
+</head>
+<body>
+        <div class="container">
+            <svg class="rose-bg" viewBox="0 0 300 300">
+                <defs>
+                    <radialGradient id="roseGrad" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#fff" stop-opacity="0.7"/>
+                        <stop offset="60%" stop-color="#c00" stop-opacity="0.7"/>
+                        <stop offset="100%" stop-color="#a00" stop-opacity="0.5"/>
+                    </radialGradient>
+                </defs>
+                <ellipse cx="150" cy="150" rx="90" ry="90" fill="url(#roseGrad)"/>
+                <ellipse cx="150" cy="150" rx="60" ry="80" fill="#c00" opacity="0.5"/>
+                <ellipse cx="150" cy="150" rx="40" ry="60" fill="#fff" opacity="0.08"/>
+                <ellipse cx="150" cy="150" rx="30" ry="40" fill="#c00" opacity="0.7"/>
+            </svg>
+            <div class="main-text">Ragsana</div>
+        </div>
+</body>
+</html>
