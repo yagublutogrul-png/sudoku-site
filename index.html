@@ -2,42 +2,42 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sudoku Həll Edici</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <!-- Google Font əlavə edirik -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; position: relative; min-height: 100vh; }
-        h1 { color: #333; }
-        .grid { display: grid; grid-template-columns: repeat(9, 36px); gap: 1px; background-color: #333; border: 2px solid #333; }
+        body { font-family: 'Poppins', sans-serif; display: flex; flex-direction: column; align-items: center; background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); position: relative; min-height: 100vh; margin: 0; padding: 20px; }
+        h1 { color: #2c3e50; margin-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .grid { display: grid; gap: 1px; background-color: #888; border: 4px solid #34495e; overflow: hidden; max-width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-radius: 8px; }
+
         .cell {
-            width: 100%; height: 100%; text-align: center; font-size: 20px; border: none; outline: none; box-sizing: border-box;
-        }
-        /* 3x3 Qutuları ayırmaq üçün qalın xətlər */
-        .cell:nth-child(3n) { border-right: 2px solid #333; }
-        .cell:nth-child(9n) { border-right: none; }
-        .cell:nth-child(n+19):nth-child(-n+27),
-        .cell:nth-child(n+46):nth-child(-n+54) {
-            border-bottom: 2px solid #333;
+            width: 100%; height: 100%; text-align: center; font-size: 20px; border: none; outline: none; box-sizing: border-box; caret-color: transparent; cursor: pointer; padding: 0;
         }
         /* Düzəliş: Grid gap istifadə etdiyimiz üçün borderləri tənzimləmək */
         .cell { margin: 0; }
 
         button {
             margin-top: 20px; padding: 10px 20px; font-size: 16px;
-            background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 5px;
+            background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 12px;
+            transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight: 600;
         }
-        button:hover { background-color: #218838; }
+        button:hover { background-color: #218838; transform: translateY(-2px); box-shadow: 0 6px 8px rgba(0,0,0,0.15); }
+        button:active { transform: translateY(0); }
         button.clear { background-color: #dc3545; margin-left: 10px; }
         button.clear:hover { background-color: #c82333; }
-        button.hint { background-color: #ffc107; color: #333; margin-left: 0; margin-bottom: 10px; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; padding: 0; display: flex; align-items: center; justify-content: center; }
-        button.hint:hover { background-color: #e0a800; }
-        button.secondary { background-color: #6c757d; margin-left: 10px; }
-        button.secondary:hover { background-color: #5a6268; }
-        button.undo { background-color: #17a2b8; margin-left: 10px; }
-        button.undo:hover { background-color: #138496; }
-        button.active { border: 2px solid #333; transform: scale(0.95); opacity: 0.8; }
+        button.hint { background-color: #f1c40f; color: #333; margin-left: 0; margin-bottom: 10px; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; padding: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(241, 196, 15, 0.4); }
+        button.active { border: 2px solid #333; transform: scale(0.95); opacity: 0.9; }
+        
+        select {
+            padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; margin-left: 10px; cursor: pointer;
+        }
 
         /* Sabit xanalar üçün stil (boz rəng və qalın yazı) */
         .fixed {
-            background-color: #e0e0e0; font-weight: bold; color: #333;
+            background-color: #ecf0f1; font-weight: bold; color: #2c3e50;
         }
 
         /* Səhv və Düz cavablar üçün stillər */
@@ -52,6 +52,16 @@
             0% { background-color: #ccffcc; } /* Açıq yaşıl */
             100% { background-color: white; }
         }
+        
+        /* Shake (Titrəmə) Animasiyası */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        .shake { animation: shake 0.3s ease-in-out; }
 
         /* Note (Qeyd) stili */
         .note {
@@ -67,12 +77,34 @@
             from { background-color: #e6f2ff; }
             to { background-color: #b8daff; }
         }
+        .hint-highlight {
+            background-color: #ffeb3b !important;
+        }
+        .highlight-same {
+            background-color: #99c2ff !important;
+        }
+        .cell.selected {
+            background-color: #bbdefb !important;
+            border: 2px solid #007bff !important;
+        }
         
         #mistakes {
             margin-bottom: 10px;
             font-size: 18px;
             font-weight: bold;
             color: #dc3545;
+        }
+        #score {
+            margin-bottom: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        #stats {
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #555;
+            display: flex; gap: 15px;
         }
         #timer {
             font-size: 20px;
@@ -86,10 +118,12 @@
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
             z-index: 1000;
+            backdrop-filter: blur(5px); /* Arxa fonu bulanıq edir */
         }
         #player-name-input {
             padding: 10px; font-size: 18px; border: 2px solid #333; border-radius: 5px; margin-bottom: 10px; width: 300px; text-align: center;
         }
+        #level-select-start { padding: 10px; font-size: 18px; border-radius: 5px; margin-bottom: 10px; width: 320px; }
         #welcome-message {
             color: #28a745; font-weight: bold; margin-bottom: 10px; display: none;
         }
@@ -101,6 +135,17 @@
             flex-direction: column;
             align-items: center; justify-content: center;
             z-index: 999;
+            backdrop-filter: blur(5px);
+        }
+        /* Qələbə ekranı üçün stil */
+        #win-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1001;
+            backdrop-filter: blur(8px);
         }
         
         /* Yeni Layout Stilləri */
@@ -108,6 +153,8 @@
             display: flex;
             align-items: flex-start;
             gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         .side-controls {
             display: flex;
@@ -120,56 +167,272 @@
         #dark-mode-btn:hover { background: none; transform: scale(1.1); }
 
         /* Dark Mode Stilləri */
-        body.dark-mode { background-color: #121212; color: #e0e0e0; }
-        body.dark-mode h1, body.dark-mode #timer, body.dark-mode #mistakes { color: #e0e0e0; }
-        body.dark-mode .grid { background-color: #555; border-color: #555; }
+        body.dark-mode { background: #121212; color: #e0e0e0; }
+        body.dark-mode h1, body.dark-mode #timer, body.dark-mode #mistakes { color: #e0e0e0; text-shadow: none; }
+        body.dark-mode .grid { background-color: #555; border-color: #444; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         body.dark-mode .cell { background-color: #1e1e1e; color: #e0e0e0; }
-        body.dark-mode .fixed { background-color: #333; color: #aaa; }
+        body.dark-mode #stats { color: #ccc; }
+        body.dark-mode .fixed { background-color: #2c2c2c; color: #aaa; }
         body.dark-mode .cell { border-color: #444; }
         body.dark-mode .highlight-line { background-color: #002a4d !important; animation: pulseBlueDark 1s infinite alternate; }
-        body.dark-mode .cell:nth-child(3n) { border-right: 2px solid #888; }
-        body.dark-mode .cell:nth-child(n+19):nth-child(-n+27),
-        body.dark-mode .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #888; }
+        body.dark-mode .highlight-same { background-color: #004080 !important; }
         body.dark-mode #start-overlay { background-color: rgba(18, 18, 18, 0.95); }
         body.dark-mode #player-name-input { background-color: #333; color: #fff; border-color: #555; }
         body.dark-mode .note { color: #aaa !important; }
         body.dark-mode .error { background-color: #5a0000 !important; color: #ff9999; }
         body.dark-mode #pause-overlay { background-color: rgba(18, 18, 18, 0.95); }
+        body.dark-mode #win-overlay { background-color: rgba(18, 18, 18, 0.95); }
         body.dark-mode #dark-mode-btn { color: #ffc107; } /* Ay/Günəş rəngi */
+        body.dark-mode #history-overlay { background-color: rgba(18, 18, 18, 0.95); }
 
         /* Rəqəm Paneli (Number Pad) */
         .number-pad {
-            display: flex; gap: 10px; margin-top: 20px; margin-bottom: 10px;
+            display: flex; gap: 10px; margin-top: 20px; margin-bottom: 10px; flex-wrap: wrap; justify-content: center;
         }
         .num-btn {
-            width: 40px; height: 40px; font-size: 20px; border-radius: 5px; border: 1px solid #ccc;
-            background-color: #fff; cursor: pointer; color: #333;
+            width: 45px; height: 45px; font-size: 20px; border-radius: 10px; border: none;
+            background-color: #fff; cursor: pointer; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.1s;
         }
         .num-btn:hover { background-color: #e2e2e2; }
+        .num-btn:hover { background-color: #f0f0f0; transform: scale(1.1); }
         body.dark-mode .num-btn { background-color: #333; color: #e0e0e0; border-color: #555; }
         body.dark-mode .num-btn:hover { background-color: #444; }
         .num-btn.hidden { visibility: hidden; pointer-events: none; }
+
+        /* Musiqi Paneli */
+        .music-controls {
+            position: absolute; top: 20px; left: 20px; display: flex; align-items: center; gap: 10px;
+            background: rgba(255, 255, 255, 0.8); padding: 5px 10px; border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); backdrop-filter: blur(5px);
+            z-index: 2000; /* Bütün overlay-lərin üzərində olsun */
+        }
+        body.dark-mode .music-controls { background: rgba(50, 50, 50, 0.8); }
+        #music-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; margin: 0; box-shadow: none; width: auto; height: auto; }
+        #music-select {
+            padding: 5px; border-radius: 15px; border: 1px solid #ccc; background: rgba(255,255,255,0.5);
+            font-size: 12px; cursor: pointer; outline: none; max-width: 100px;
+        }
+        body.dark-mode #music-select { background: rgba(0,0,0,0.5); color: #fff; border-color: #555; }
+        body.dark-mode #music-select option { background-color: #333; color: #fff; }
+        #music-upload-btn {
+            padding: 5px 10px; border-radius: 15px; border: 1px solid #ccc; background: rgba(255,255,255,0.5);
+            font-size: 12px; cursor: pointer; color: #333; margin-left: 5px; margin-top: 0; box-shadow: none; width: auto;
+        }
+        body.dark-mode #music-upload-btn { background: rgba(0,0,0,0.5); color: #fff; border-color: #555; }
+
+        /* Tarixçə Ekranı */
+        #history-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1002;
+            backdrop-filter: blur(5px);
+        }
+        #history-list { list-style: none; padding: 0; width: 300px; text-align: center; max-height: 60vh; overflow-y: auto; }
+        #history-list li { background: #f8f9fa; margin: 8px 0; padding: 12px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 16px; }
+        body.dark-mode #history-list li { background: #333; color: #e0e0e0; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .history-date { font-size: 12px; color: #888; display: block; margin-bottom: 4px; }
+
+        /* Tutorial (Necə Oynanılır) Ekranı */
+        #tutorial-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.98);
+            display: none;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 1005; /* Start overlay-dən yuxarıda */
+            overflow-y: auto;
+        }
+        body.dark-mode #tutorial-overlay { background-color: rgba(18, 18, 18, 0.98); }
+        .tutorial-content {
+            max-width: 600px; width: 90%; background: #fff; padding: 20px; border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow-y: auto; max-height: 80vh;
+        }
+        body.dark-mode .tutorial-content { background: #2c2c2c; color: #e0e0e0; }
+        .tutorial-step { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .tutorial-step h3 { color: #007bff; margin-top: 0; }
+        
+        /* Tutorial Highlights */
+        .tut-highlight-row { background-color: #bbdefb !important; }
+        .tut-highlight-col { background-color: #c3e6cb !important; }
+        .tut-highlight-box { background-color: #ffeeba !important; }
+        body.dark-mode .tut-highlight-row { background-color: #004085 !important; }
+        body.dark-mode .tut-highlight-col { background-color: #155724 !important; }
+        body.dark-mode .tut-highlight-box { background-color: #856404 !important; }
+        
+        .tut-btn-close { margin-top: 20px; background-color: #6c757d; }
+        
+        /* Credits Overlay */
+        #credits-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.98); display: none;
+            flex-direction: column; align-items: center; justify-content: center; z-index: 1006;
+        }
+        body.dark-mode #credits-overlay { background-color: rgba(18, 18, 18, 0.98); }
+
+        /* Bug Report Modal */
+        #bug-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 2005;
+            backdrop-filter: blur(3px);
+        }
+        .bug-modal {
+            background: white; padding: 20px; border-radius: 10px; width: 300px; display: flex; flex-direction: column; gap: 10px;
+        }
+        body.dark-mode .bug-modal { background: #333; color: #fff; }
+
+        /* Zen Mode */
+        body.zen-mode h1, 
+        body.zen-mode #stats, 
+        body.zen-mode .music-controls, 
+        body.zen-mode #dark-mode-btn, 
+        body.zen-mode #timer, 
+        body.zen-mode #mistakes, 
+        body.zen-mode #score, 
+        body.zen-mode #welcome-message, 
+        body.zen-mode .bottom-controls,
+        body.zen-mode .side-controls {
+            display: none !important;
+        }
+        #zen-exit-btn {
+            position: fixed; top: 20px; right: 20px;
+            background-color: #dc3545; color: white;
+            border: none; padding: 12px 24px; border-radius: 8px;
+            cursor: pointer; display: none; z-index: 9999;
+            font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        body.zen-mode #zen-exit-btn { display: block; }
     </style>
 </head>
 <body>
 
     <button id="dark-mode-btn" onclick="toggleDarkMode()">🌙</button>
-
-    <div id="start-overlay">
-        <h1>Sudokuya Xoş Gəldiniz!</h1>
-        <input type="text" id="player-name-input" placeholder="Adınızı daxil edin...">
-        <button onclick="startGame()">Oyuna Başla</button>
+    
+    <div class="music-controls">
+        <button id="music-btn" onclick="toggleMusic()">🔇</button>
+        <select id="music-select" onchange="changeMusic(this.value)">
+            <option value="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=relaxing-mountains-rivers-103729.mp3">Sakitləşdirici</option>
+            <option value="https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3?filename=piano-moment-111901.mp3">Piano</option>
+            <option value="https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=lofi-study-112191.mp3">Lofi / Dərs</option>
+            <option value="https://cdn.pixabay.com/download/audio/2021/09/06/audio_9c05c6b760.mp3?filename=forest-lullaby-110624.mp3">Meşə Səsləri</option>
+            <option value="https://cdn.pixabay.com/download/audio/2022/11/22/audio_febc508520.mp3?filename=ambient-classical-guitar-12498.mp3">Gitara</option>
+            <option value="alan_walker_on_my_way.mp3">Alan Walker - On My Way</option>
+        </select>
+        <input type="file" id="upload-music-input" accept="audio/*" style="display: none;" onchange="handleMusicUpload(this)">
+        <button id="music-upload-btn" onclick="document.getElementById('upload-music-input').click()">📂 Yüklə</button>
     </div>
 
-    <div id="pause-overlay">
+    <button id="zen-exit-btn" onclick="toggleZenMode()">Normal Rejimə Qayıt ✕</button>
+
+    <div id="start-overlay" style="display: flex;">
+        <h1>Sudokuya Xoş Gəldiniz!</h1>
+        <input type="text" id="player-name-input" placeholder="Adınızı daxil edin...">
+        <select id="level-select-start">
+            <option value="3">Çox Asan (3x3)</option>
+            <option value="6">Asan (6x6)</option>
+            <option value="9" selected>Orta (9x9)</option>
+            <option value="12">Çətin (12x12)</option>
+            <option value="16">Ən Çətin (16x16)</option>
+        </select>
+        <button onclick="startGame()">Oyuna Başla</button>
+        <button onclick="openTutorial()" style="background-color: #17a2b8; margin-top: 10px;">❓ Necə Oynanılır?</button>
+        <button onclick="openCredits()" style="background-color: #6f42c1; margin-top: 10px;">👨‍💻 Əməyi Keçənlər</button>
+    </div>
+
+    <div id="pause-overlay" style="display: none;">
         <h2>Oyun Dayandırıldı</h2>
         <button onclick="togglePause()">Davam Et</button>
+    </div>
+
+    <div id="win-overlay" style="display: none;">
+        <h1>Təbriklər! 🎉</h1>
+        <h2 id="win-time"></h2>
+        
+        <textarea id="win-message-input" placeholder="Qurucuya ürək sözlərinizi yazın..." style="width: 80%; height: 60px; margin-top: 10px; padding: 10px; border-radius: 5px; border: 1px solid #ccc;"></textarea>
+        <button id="send-msg-btn" onclick="sendMessageToCreator()" style="background-color: #ff4757; margin-top: 5px; font-size: 14px; padding: 5px 15px;">💌 Göndər</button>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="shareResult()" style="background-color: #007bff;">📤 Paylaş</button>
+            <button onclick="downloadResultImage()" style="background-color: #17a2b8;">📷 Şəkli Yüklə</button>
+            <button onclick="newGame()">🔄 Yeni Oyun</button>
+            <button onclick="closeWinOverlay()" class="secondary">Bağla</button>
+        </div>
+    </div>
+    
+    <div id="history-overlay" style="display: none;">
+        <h2>📜 Son 5 Oyun</h2>
+        <ul id="history-list"></ul>
+        <button onclick="toggleHistory()" class="secondary" style="margin-top: 20px;">Bağla</button>
+    </div>
+
+    <!-- Tutorial Overlay -->
+    <div id="tutorial-overlay" style="display: none;">
+        <div class="tutorial-content">
+            <h2 style="text-align: center;">Sudoku Qaydaları</h2>
+            
+            <div class="tutorial-step">
+                <p>Sudoku 9x9 ölçülü bir lövhədə oynanılır. Məqsəd boş xanaları 1-dən 9-a qədər rəqəmlərlə doldurmaqdır.</p>
+                <p>Aşağıdakı <b>böyük nümunə lövhə</b> üzərində qaydaları öyrənmək üçün düymələrə basın:</p>
+            </div>
+
+            <!-- Demo Board -->
+            <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                <div id="tutorial-board" class="grid" style="pointer-events: none;"></div>
+            </div>
+
+            <!-- Controls -->
+            <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px;">
+                <button onclick="showTutorialRule('row')" style="font-size: 12px; padding: 8px; background-color: #007bff;">Sətir (Row)</button>
+                <button onclick="showTutorialRule('col')" style="font-size: 12px; padding: 8px; background-color: #28a745;">Sütun (Column)</button>
+                <button onclick="showTutorialRule('box')" style="font-size: 12px; padding: 8px; background-color: #ffc107; color: #333;">Kvadrat (Box)</button>
+            </div>
+            
+            <div id="tutorial-text" style="background: #f1f1f1; padding: 15px; border-radius: 8px; border-left: 5px solid #333; margin-bottom: 20px; font-size: 14px; color: #333;">
+                Qaydanı görmək üçün yuxarıdakı düymələrdən birini seçin.
+            </div>
+
+            <button onclick="closeTutorial()" class="tut-btn-close" style="width: 100%;">Başa düşdüm, Bağla</button>
+        </div>
+    </div>
+    
+    <!-- Credits Overlay -->
+    <div id="credits-overlay" style="display: none;">
+        <div class="tutorial-content" style="text-align: center;">
+            <h2>👨‍💻 Əməyi Keçənlər</h2>
+            <p style="font-size: 18px;">Bu oyunun qurucusu:</p>
+            <h1 style="color: #007bff;">Togrul Yaqublu</h1>
+            <p>Oynadığınız üçün təşəkkürlər!</p>
+            <button onclick="closeCredits()" class="secondary" style="margin-top: 20px;">Bağla</button>
+        </div>
+    </div>
+
+    <!-- Bug Report Overlay -->
+    <div id="bug-overlay" style="display: none;">
+        <div class="bug-modal">
+            <h3>🐞 Xəta Bildir</h3>
+            <input type="text" id="bug-title" placeholder="Başlıq (məs: Oyun dondu)" style="width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box;">
+            <textarea id="bug-desc" rows="4" placeholder="Xətanı təsvir edin..." style="width: 100%; padding: 5px;"></textarea>
+            <input type="file" id="bug-image" accept="image/*" style="margin-top: 10px; margin-bottom: 10px;">
+            <button onclick="submitBugReport()">Göndər</button>
+            <button onclick="closeBugModal()" class="secondary">Bağla</button>
+        </div>
     </div>
 
     <h1>Toghrul's Sudoku Game</h1>
     <h2 id="welcome-message"></h2>
     <div id="timer">Vaxt: 00:00</div>
     <div id="mistakes">Səhvlər: 0 / 3</div>
+    <div id="score">Xal: 0</div>
+    <div id="stats">
+        <span>🏆 Qələbələrin: <span id="player-wins">0</span></span>
+        <span>🤖 Sistem: <span id="system-wins">0</span></span>
+        <button onclick="resetStats()" style="padding: 5px 10px; font-size: 12px; margin-left: 10px; background-color: #6c757d;">🔄 Sıfırla</button>
+    </div>
     
     <div class="game-wrapper">
         <div id="board-container" class="grid"></div>
@@ -179,26 +442,25 @@
     </div>
     
     <!-- Rəqəm Paneli -->
-    <div class="number-pad">
-        <button class="num-btn" onclick="addNumberFromPad(1)">1</button>
-        <button class="num-btn" onclick="addNumberFromPad(2)">2</button>
-        <button class="num-btn" onclick="addNumberFromPad(3)">3</button>
-        <button class="num-btn" onclick="addNumberFromPad(4)">4</button>
-        <button class="num-btn" onclick="addNumberFromPad(5)">5</button>
-        <button class="num-btn" onclick="addNumberFromPad(6)">6</button>
-        <button class="num-btn" onclick="addNumberFromPad(7)">7</button>
-        <button class="num-btn" onclick="addNumberFromPad(8)">8</button>
-        <button class="num-btn" onclick="addNumberFromPad(9)">9</button>
-    </div>
+    <div class="number-pad" id="number-pad"></div>
 
-    <div>
+    <div class="bottom-controls">
         <button onclick="solveBoard()">Həll Et</button>
-        <button class="undo" onclick="undoMove()">↩️ Geri Al</button>
-        <button class="secondary" onclick="togglePause()">⏸️ Fasilə</button>
-        <button class="secondary" onclick="toggleNoteMode()" id="note-btn">Note: Off</button>
+        <button class="undo" onclick="undoMove()" title="Geri Al">↩️</button>
+        <button class="secondary" onclick="togglePause()" title="Fasilə">⏸️</button>
+        <button class="secondary" onclick="toggleNoteMode()" id="note-btn" title="Qeyd">✏️</button>
         <button class="clear" onclick="clearBoard()">Təmizlə</button>
         <button class="secondary" onclick="newGame()">🔄 Yeni Oyun</button>
+        <button class="secondary" onclick="toggleHistory()" style="background-color: #17a2b8; color: white;">📜 Tarixçə</button>
+        <button class="secondary" onclick="startDailyChallenge()" style="background-color: #6f42c1; color: white;">📅 Gündəlik</button>
+        <button class="secondary" onclick="openBugModal()" style="background-color: #dc3545; color: white;">🐞 Bug Report</button>
+        <button class="secondary" onclick="toggleZenMode()" style="background-color: #20c997; color: white;" title="Diqqət Modu">👁️ Diqqət Modu</button>
     </div>
+
+    <!-- Arxa fon musiqisi (Sakitləşdirici) -->
+    <audio id="bg-music" loop>
+        <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=relaxing-mountains-rivers-103729.mp3" type="audio/mpeg">
+    </audio>
 
     <script>
         const container = document.getElementById('board-container');
@@ -207,6 +469,7 @@
         let isNoteMode = false;
         let isPaused = false;
         let mistakes = 0;
+        let score = 0;
         let historyStack = []; // Geri almaq üçün tarixçə
         let currentCellOldValue = ""; // Fokuslanan xananın köhnə dəyəri
         let selectedCell = null; // Hazırda seçili olan xana
@@ -214,50 +477,229 @@
         // Python-dan gələn lövhəni bura qəbul edirik
         let initialBoard = {{ board | tojson }};
         let solutionBoard = {{ solution | tojson }};
+        let playerWins = 0;
+        let systemWins = 0;
         
+        // --- Musiqi İdarəetməsi ---
+        const bgMusic = document.getElementById('bg-music');
+        const musicBtn = document.getElementById('music-btn');
+        bgMusic.volume = 0.3; // Başlanğıc səs səviyyəsi
+
+        function toggleMusic() {
+            if (bgMusic.paused) {
+                bgMusic.play().catch(e => console.log("Autoplay blocked:", e));
+                musicBtn.innerText = "🔊";
+            } else {
+                bgMusic.pause();
+                musicBtn.innerText = "🔇";
+            }
+        }
+
+        function changeMusic(url) {
+            bgMusic.src = url;
+            bgMusic.load();
+            // Mahnı dəyişəndə avtomatik oxut
+            bgMusic.play().catch(e => console.log(e));
+            musicBtn.innerText = "🔊";
+        }
+
+        function handleMusicUpload(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const url = URL.createObjectURL(file);
+                
+                const select = document.getElementById('music-select');
+                const option = document.createElement('option');
+                option.value = url;
+                option.text = "📂 " + file.name;
+                select.add(option);
+                select.value = url;
+                
+                changeMusic(url);
+            }
+        }
+        // ---------------------------
+
+        // --- Səs Effektləri ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            if (type === 'win') {
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C Major arpeggio
+                notes.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gn = audioCtx.createGain();
+                    osc.connect(gn);
+                    gn.connect(audioCtx.destination);
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gn.gain.setValueAtTime(0.1, audioCtx.currentTime + i * 0.1);
+                    gn.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + i * 0.1 + 0.4);
+                    osc.start(audioCtx.currentTime + i * 0.1);
+                    osc.stop(audioCtx.currentTime + i * 0.1 + 0.4);
+                });
+                return;
+            }
+
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'click') {
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'error') {
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        function updateScore(amount) {
+            score += amount;
+            if (score < 0) score = 0;
+            document.getElementById('score').innerText = `Xal: ${score}`;
+        }
+
+        function updateStatsDisplay() {
+            playerWins = parseInt(localStorage.getItem('playerWins')) || 0;
+            systemWins = parseInt(localStorage.getItem('systemWins')) || 0;
+            document.getElementById('player-wins').innerText = playerWins;
+            document.getElementById('system-wins').innerText = systemWins;
+        }
+
+        function resetStats() {
+            if (confirm("Statistikanı sıfırlamaq istədiyinizə əminsiniz?")) {
+                playerWins = 0;
+                systemWins = 0;
+                localStorage.setItem('playerWins', 0);
+                localStorage.setItem('systemWins', 0);
+                updateStatsDisplay();
+            }
+        }
+
         function drawBoard() {
             container.innerHTML = '';
-            // 9x9 Grid yaratmaq
-            for (let i = 0; i < 9; i++) {
-                for (let j = 0; j < 9; j++) {
+            const size = initialBoard.length;
+            let boxH, boxW;
+            
+            // Ölçüyə görə qutu ölçülərini təyin et
+            if (size === 3) { boxH = 3; boxW = 3; } // 3x3 üçün daxili qalın xətt yoxdur
+            else if (size === 6) { boxH = 2; boxW = 3; }
+            else if (size === 9) { boxH = 3; boxW = 3; }
+            else if (size === 12) { boxH = 3; boxW = 4; }
+            else if (size === 16) { boxH = 4; boxW = 4; }
+            
+            // Dinamik ölçülər (12x12 üçün kiçildirik)
+            let cellWidth = 36;
+            let cellHeight = 36;
+            let fontSize = 20;
+            if (size === 12) {
+                cellWidth = 28; 
+                cellHeight = 28;
+                fontSize = 14;
+            } else if (size === 16) {
+                cellWidth = 22;
+                cellHeight = 22;
+                fontSize = 11;
+            } else if (size === 3) {
+                cellWidth = 60; 
+                cellHeight = 60;
+                fontSize = 30;
+            }
+            container.style.gridTemplateColumns = `repeat(${size}, ${cellWidth}px)`;
+            container.style.gridAutoRows = `${cellHeight}px`;
+
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
                 let input = document.createElement('input');
                 input.type = 'text';
-                input.maxLength = 1;
+                input.style.fontSize = `${fontSize}px`;
                 input.className = 'cell';
+                input.setAttribute('inputmode', 'none'); // Mobil klaviaturanı bağlayır
                 input.dataset.row = i;
                 input.dataset.col = j;
+                input.readOnly = true; // Klaviaturanı və avtomatik skrollu tamamilə bağlayır
+                input.setAttribute('tabindex', '-1'); // Fokuslanmanı tamamilə ləğv etmək üçün
+
+                // Brauzerin avtomatik fokuslanmasını (və ekranı sürüşdürməsini) dayandırır
+                input.onmousedown = function(e) { e.preventDefault(); };
                 
-                // Fokuslananda köhnə dəyəri yadda saxla (Undo üçün)
-                input.onfocus = function() {
+                // Fokuslanma əvəzinə Click hadisəsi ilə işləyirik (Skroll problemini həll etmək üçün)
+                input.onclick = function(e) {
+                    if (selectedCell) {
+                        selectedCell.classList.remove('selected');
+                    }
+                    // Köhnə işıqları təmizlə
+                    document.querySelectorAll('.cell').forEach(c => c.classList.remove('highlight-line', 'highlight-same'));
+
+                    selectedCell = this;
+                    this.classList.add('selected');
                     currentCellOldValue = this.value;
-                    selectedCell = this; // Seçilmiş xananı yadda saxla
                     
-                    // Sətir və Sütunu vurğula
                     let r = parseInt(this.dataset.row);
                     let c = parseInt(this.dataset.col);
+                    let boxStartRow = r - (r % boxH);
+                    let boxStartCol = c - (c % boxW);
+                    let val = this.value;
+
                     document.querySelectorAll('.cell').forEach(cell => {
-                        if (parseInt(cell.dataset.row) === r || parseInt(cell.dataset.col) === c) {
+                        let cellR = parseInt(cell.dataset.row);
+                        let cellC = parseInt(cell.dataset.col);
+
+                        // Sətir, Sütun və Kvadratı vurğula
+                        if (cellR === r || cellC === c || (cellR >= boxStartRow && cellR < boxStartRow + boxH && cellC >= boxStartCol && cellC < boxStartCol + boxW)) {
                             cell.classList.add('highlight-line');
+                        }
+                        
+                        // Eyni rəqəmləri vurğula
+                        if (val !== "" && cell.value === val) {
+                            cell.classList.add('highlight-same');
                         }
                     });
                 };
 
-                input.onblur = function() {
-                    document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('highlight-line'));
-                };
-
                 // Yalnız rəqəm daxil etməyə icazə ver
                 input.oninput = function() {
-                    let newValue = this.value.replace(/[^1-9]/g, '');
-                    
-                    // Əgər dəyər dəyişməyibsə, heç nə etmə
-                    if (newValue === currentCellOldValue && newValue !== "") return;
-                    
-                    this.value = this.value.replace(/[^1-9]/g, '');
+                    // Rəqəm təmizləmə (12x12 üçün 10,11,12 dəstəyi lazımdır, amma input text olduğu üçün sadəcə rəqəm saxlayırıq)
+                    let val = this.value.replace(/[^0-9]/g, '');
+
+                    if (val.length > 0) {
+                        // 9x9 rejimində həmişə sonuncu rəqəmi götür (əvəzləmə effekti)
+                        if (size < 10 && val.length > 1) {
+                            val = val.slice(-1);
+                        }
+                        // 10+ rejimlərdə (12x12, 16x16) əgər ədəd max-dan böyükdürsə sonuncunu götür
+                        else if (parseInt(val) > size) {
+                            val = val.slice(-1);
+                        }
+                    }
+                    this.value = val;
 
                     // Tarixçəyə əlavə et
                     historyStack.push({ element: this, oldValue: currentCellOldValue, newValue: this.value });
                     currentCellOldValue = this.value; // Yenilə
+
+                    // Eyni rəqəmləri yenilə
+                    let strVal = this.value;
+                    document.querySelectorAll('.cell').forEach(cell => {
+                        cell.classList.remove('highlight-same');
+                        if (strVal !== "" && cell.value === strVal) {
+                            cell.classList.add('highlight-same');
+                        }
+                    });
                     
                     // Əgər xana boşaldılıbsa, rəngləri təmizlə və çıx
                     if (this.value === '') {
@@ -274,14 +716,20 @@
                         this.classList.remove('note');
                     }
 
-                    let val = parseInt(this.value);
+                    let numVal = parseInt(this.value);
                     let r = parseInt(this.dataset.row);
                     let c = parseInt(this.dataset.col);
                     let correctVal = solutionBoard[r][c];
 
                     // Yoxlama
-                    if (val === correctVal) {
+                    if (numVal === correctVal) {
                         // Düzdürsə
+                        playSound('click');
+                        updateScore(10);
+
+                        // Əgər əvvəlki səhv silinməyibsə, taymeri dayandır
+                        if (this.errorTimeout) clearTimeout(this.errorTimeout);
+
                         this.classList.remove('error');
                         this.classList.add('success');
                         // 1 saniyə sonra success klassını silirik ki, fon ağ olsun (animasiya bitəndə)
@@ -295,12 +743,22 @@
                         checkWin(); // Qalibiyyəti yoxla
                     } else {
                         // Səhvdirsə
+                        playSound('error');
+                        updateScore(-50);
+                        
+                        // Titrəmə effekti
+                        this.classList.add('shake');
+                        setTimeout(() => this.classList.remove('shake'), 300);
+
                         this.classList.add('error');
                         mistakes++;
                         mistakesDisplay.innerText = `Səhvlər: ${mistakes} / 3`;
 
+                        // Əgər əvvəlki taymer varsa təmizlə
+                        if (this.errorTimeout) clearTimeout(this.errorTimeout);
+
                         // 2 saniyə sonra silinsin
-                        setTimeout(() => {
+                        this.errorTimeout = setTimeout(() => {
                             this.value = '';
                             this.classList.remove('error');
                         }, 2000);
@@ -319,51 +777,62 @@
                 if (initialBoard[i][j] !== 0) {
                     input.value = initialBoard[i][j];
                     input.classList.add('fixed');
-                    input.readOnly = true; // İstifadəçi dəyişə bilməsin
                 }
                 
+                // Qalın sərhədlər (Borders)
+                if ((j + 1) % boxW === 0 && j !== size - 1) {
+                    input.style.borderRight = "2px solid #333";
+                }
+                if ((i + 1) % boxH === 0 && i !== size - 1) {
+                    input.style.borderBottom = "2px solid #333";
+                }
+
                 container.appendChild(input);
             }
             }
+            
+            // Rəqəm panelini yenilə
+            const pad = document.getElementById('number-pad');
+            pad.innerHTML = '';
+            for(let k=1; k<=size; k++){
+                let btn = document.createElement('button');
+                btn.className = 'num-btn';
+                btn.innerText = k;
+                btn.onclick = function() { addNumberFromPad(k); };
+                pad.appendChild(btn);
+            }
+
             updateNumberPadVisibility();
         }
         
         drawBoard();
+        updateStatsDisplay();
 
-        async function solveBoard() {
-            let board = [];
+        function solveBoard() {
             let inputs = document.querySelectorAll('.cell');
-            let currentRow = [];
-            
-            // HTML-dən dəyərləri oxuyub massivə yığırıq
+
+            // Həll artıq yaddaşda var (solutionBoard), birbaşa ondan istifadə edirik
+            // Bu, istifadəçi səhv rəqəm yazsa belə düzgün həlli göstərir
+            let flatSolution = solutionBoard.flat();
+
             inputs.forEach((input, index) => {
-                currentRow.push(input.value);
-                if ((index + 1) % solutionBoard.length === 0) {
-                    board.push(currentRow);
-                    currentRow = [];
-                }
+                input.value = flatSolution[index];
+                // Oyunu bitmiş hesab edirik və xanaları kilidləyirik
+                input.readOnly = true;
+                input.classList.add('fixed');
+                input.classList.remove('error', 'success');
             });
 
-            // Python backend-ə göndəririk
-            const response = await fetch('/solve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ board: board })
-            });
+            clearInterval(timerInterval); // Həll düyməsi basılanda vaxtı dayandır
+            updateNumberPadVisibility();
 
-            const result = await response.json();
+            systemWins++;
+            localStorage.setItem('systemWins', systemWins);
+            updateStatsDisplay();
 
-            if (result.status === 'success') {
-                // Həll olunmuş lövhəni yerinə yazırıq
-                let flatBoard = result.board.flat();
-                inputs.forEach((input, index) => {
-                    input.value = flatBoard[index];
-                });
-                clearInterval(timerInterval); // Həll düyməsi basılanda vaxtı dayandır
-                updateNumberPadVisibility();
-            } else {
-                alert("Həll tapılmadı! Rəqəmləri yoxlayın.");
-            }
+            setTimeout(() => {
+                alert("Oyun sistem tərəfindən həll edildi! (Sistem Qələbəsi)");
+            }, 100);
         }
 
         function clearBoard() {
@@ -401,7 +870,7 @@
         }
 
         let hintsUsed = 0;
-        const maxHints = 1;
+        let maxHints = 1;
 
         function getHint() {
             if (hintsUsed >= maxHints) return;
@@ -422,18 +891,17 @@
             randomCell.value = solutionBoard[r][c];
             randomCell.classList.add('fixed');
             randomCell.readOnly = true;
+            randomCell.classList.add('hint-highlight');
+            setTimeout(() => randomCell.classList.remove('hint-highlight'), 1000);
             
             hintsUsed++;
-            // document.getElementById('hint-btn').innerText = `Hint (${maxHints - hintsUsed})`; // İkon olduğu üçün yazı dəyişmirik
             
             if (hintsUsed >= maxHints) {
                 document.getElementById('hint-btn').disabled = true;
                 document.getElementById('hint-btn').style.opacity = "0.6";
             }
             checkWin();
-            updateNumberPadVisibility();
         }
-
         // --- Taymer və Qalibiyyət Məntiqi ---
         let seconds = 0;
         let timerInterval;
@@ -445,6 +913,10 @@
                 let secs = seconds % 60;
                 // 00:00 formatında göstərmək üçün
                 timerDisplay.innerText = `Vaxt: ${mins < 10 ? '0'+mins : mins}:${secs < 10 ? '0'+secs : secs}`;
+                
+                // Vaxt keçdikcə xal azalır (hər 5 saniyədə -1 xal)
+                if (seconds % 5 === 0) updateScore(-1);
+                
             }, 1000);
         }
 
@@ -459,10 +931,25 @@
             }
             // Bütün xanalar doludursa və düzdürsə:
             clearInterval(timerInterval);
-            alert(`Təbriklər, siz oyunu uğurla bitirdiniz!\nBitirmə vaxtınız: ${timerDisplay.innerText.replace('Vaxt: ', '')}`);
+
+            playerWins++;
+            localStorage.setItem('playerWins', playerWins);
+            updateStatsDisplay();
+            
+            // Tarixçəyə yaz
+            saveHistory(initialBoard.length, timerDisplay.innerText.replace('Vaxt: ', ''));
+
+            // Konfetti effekti
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+
+            playSound('win');
+            setTimeout(() => {
+                document.getElementById('win-time').innerText = `Bitirmə vaxtınız: ${timerDisplay.innerText.replace('Vaxt: ', '')}`;
+                document.getElementById('win-overlay').style.display = 'flex';
+            }, 500);
         }
 
-        function startGame() {
+        async function startGame() {
             const nameInput = document.getElementById('player-name-input');
             const name = nameInput.value.trim();
             
@@ -470,13 +957,41 @@
                 alert("Zəhmət olmasa adınızı yazın!");
                 return;
             }
+            
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            // Seçilən leveli alırıq
+            const size = document.getElementById('level-select-start').value;
+            
+            if (parseInt(size) === 16) {
+                maxHints = 2;
+            } else {
+                maxHints = 1;
+            }
+            document.getElementById('hint-btn').innerText = `💡 ${maxHints}`;
+
+            // Serverdən yeni lövhə istəyirik
+            const response = await fetch(`/new-board?size=${size}`);
+            const data = await response.json();
+            initialBoard = data.board;
+            solutionBoard = data.solution;
 
             document.getElementById('welcome-message').innerText = "Xoş gəldin " + name.toUpperCase();
             document.getElementById('welcome-message').style.display = "block";
             document.getElementById('start-overlay').style.display = "none";
             
+            score = 0;
+            document.getElementById('score').innerText = "Xal: 0";
+            
             startTimer(); // Vaxtı yalnız ad daxil edildikdən sonra başlat
-            updateNumberPadVisibility(); // Başlanğıcda dolu rəqəmləri yoxla
+            drawBoard(); // Lövhəni çək
+            
+            // Oyuna başlayanda musiqini işə salmağa cəhd edirik
+            bgMusic.play().then(() => {
+                musicBtn.innerText = "🔊";
+            }).catch(() => { /* Brauzer icazə verməsə sakit qalır */ });
         }
 
         function toggleDarkMode() {
@@ -494,10 +1009,8 @@
             isNoteMode = !isNoteMode;
             const btn = document.getElementById('note-btn');
             if (isNoteMode) {
-                btn.innerText = "Note: On";
                 btn.classList.add('active');
             } else {
-                btn.innerText = "Note: Off";
                 btn.classList.remove('active');
             }
         }
@@ -515,17 +1028,264 @@
             }
         }
 
+        function saveHistory(size, time) {
+            let history = JSON.parse(localStorage.getItem('sudoku_history')) || [];
+            const date = new Date();
+            const dateStr = date.toLocaleDateString('az-AZ') + ' ' + date.toLocaleTimeString('az-AZ', {hour: '2-digit', minute:'2-digit'});
+            
+            // Yeni nəticəni əvvələ əlavə et
+            history.unshift({ date: dateStr, size: size, time: time });
+            
+            // Yalnız son 5 nəticəni saxla
+            if (history.length > 5) history.pop();
+            
+            localStorage.setItem('sudoku_history', JSON.stringify(history));
+        }
+
+        function toggleHistory() {
+            const overlay = document.getElementById('history-overlay');
+            if (overlay.style.display === 'flex') {
+                overlay.style.display = 'none';
+            } else {
+                const list = document.getElementById('history-list');
+                const history = JSON.parse(localStorage.getItem('sudoku_history')) || [];
+                list.innerHTML = '';
+                if (history.length === 0) {
+                    list.innerHTML = '<li style="background:none; box-shadow:none;">Hələ oyun tarixçəsi yoxdur.</li>';
+                } else {
+                    history.forEach(game => {
+                        let li = document.createElement('li');
+                        li.innerHTML = `<span class="history-date">${game.date}</span><b>${game.size}x${game.size}</b> - ⏱️ ${game.time}`;
+                        list.appendChild(li);
+                    });
+                }
+                overlay.style.display = 'flex';
+            }
+        }
+
+        function closeWinOverlay() {
+            document.getElementById('win-overlay').style.display = 'none';
+        }
+
+        function openTutorial() {
+            document.getElementById('tutorial-overlay').style.display = 'flex';
+            initTutorialBoard();
+        }
+
+        function closeTutorial() {
+            document.getElementById('tutorial-overlay').style.display = 'none';
+        }
+        
+        function openCredits() {
+            document.getElementById('credits-overlay').style.display = 'flex';
+        }
+
+        function closeCredits() {
+            document.getElementById('credits-overlay').style.display = 'none';
+        }
+
+        function toggleZenMode() {
+            document.body.classList.toggle('zen-mode');
+        }
+
+        function initTutorialBoard() {
+            const tutContainer = document.getElementById('tutorial-board');
+            if (tutContainer.innerHTML !== '') return; // Artıq çəkilibsə təkrar çəkmə
+
+            // Nümunə data (9x9)
+            const data = [
+                [5, 3, 0, 0, 7, 0, 0, 0, 0],
+                [6, 0, 0, 1, 9, 5, 0, 0, 0],
+                [0, 9, 8, 0, 0, 0, 0, 6, 0],
+                [8, 0, 0, 0, 6, 0, 0, 0, 3],
+                [4, 0, 0, 8, 0, 3, 0, 0, 1],
+                [7, 0, 0, 0, 2, 0, 0, 0, 6],
+                [0, 6, 0, 0, 0, 0, 2, 8, 0],
+                [0, 0, 0, 4, 1, 9, 0, 0, 5],
+                [0, 0, 0, 0, 8, 0, 0, 7, 9]
+            ];
+
+            tutContainer.style.gridTemplateColumns = `repeat(9, 30px)`;
+            tutContainer.style.gridAutoRows = `30px`;
+            tutContainer.style.width = 'fit-content';
+            
+            for(let i=0; i<9; i++) {
+                for(let j=0; j<9; j++) {
+                    let div = document.createElement('div');
+                    div.className = 'cell';
+                    div.style.fontSize = '16px';
+                    div.style.display = 'flex';
+                    div.style.alignItems = 'center';
+                    div.style.justifyContent = 'center';
+                    div.style.cursor = 'default';
+                    
+                    if(data[i][j] !== 0) {
+                        div.innerText = data[i][j];
+                        div.classList.add('fixed'); // Mövcud fixed stilini istifadə et
+                    }
+                    
+                    // Borders
+                    if ((j + 1) % 3 === 0 && j !== 8) div.style.borderRight = "2px solid #333";
+                    if ((i + 1) % 3 === 0 && i !== 8) div.style.borderBottom = "2px solid #333";
+                    
+                    div.dataset.tutRow = i;
+                    div.dataset.tutCol = j;
+                    
+                    tutContainer.appendChild(div);
+                }
+            }
+        }
+
+        function showTutorialRule(type) {
+            const cells = document.querySelectorAll('#tutorial-board .cell');
+            const textDiv = document.getElementById('tutorial-text');
+            
+            // Təmizlə
+            cells.forEach(c => {
+                c.classList.remove('tut-highlight-row', 'tut-highlight-col', 'tut-highlight-box');
+            });
+
+            if (type === 'row') {
+                // 2-ci sətri (index 1) vurğula
+                cells.forEach(c => {
+                    if (c.dataset.tutRow == "1") c.classList.add('tut-highlight-row');
+                });
+                textDiv.innerHTML = "<b>Sətir Qaydası:</b><br>Hər bir üfüqi sətirdə 1-dən 9-a qədər rəqəmlər yalnız bir dəfə istifadə olunmalıdır. Məsələn, işarələnmiş sətirdə 6, 1, 9, 5 var, digərləri tapılmalıdır.";
+                textDiv.style.borderLeftColor = "#007bff";
+            } else if (type === 'col') {
+                // 4-cü sütunu (index 3) vurğula
+                cells.forEach(c => {
+                    if (c.dataset.tutCol == "3") c.classList.add('tut-highlight-col');
+                });
+                textDiv.innerHTML = "<b>Sütun Qaydası:</b><br>Hər bir şaquli sütunda rəqəmlər təkrarlanmamalıdır. İşarələnmiş sütuna baxın.";
+                textDiv.style.borderLeftColor = "#28a745";
+            } else if (type === 'box') {
+                // Ortadakı kvadratı vurğula (rows 3-5, cols 3-5)
+                cells.forEach(c => {
+                    let r = parseInt(c.dataset.tutRow);
+                    let col = parseInt(c.dataset.tutCol);
+                    if (r >= 3 && r <= 5 && col >= 3 && col <= 5) {
+                        c.classList.add('tut-highlight-box');
+                    }
+                });
+                textDiv.innerHTML = "<b>Kvadrat (Box) Qaydası:</b><br>Lövhə 9 ədəd 3x3 kvadrata bölünür. Hər kvadratın içində də 1-9 arası rəqəmlər unikal olmalıdır.";
+                textDiv.style.borderLeftColor = "#ffc107";
+            }
+        }
+
+        function shareResult() {
+            const time = timerDisplay.innerText.replace('Vaxt: ', '');
+            const size = initialBoard.length;
+            const text = `Mən ${size}x${size} Sudokunu ${time} ərzində həll etdim! 🏆 Sən də yoxla!`;
+            const fullText = text + " " + window.location.href;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Sudoku Nəticəm',
+                    text: text,
+                    url: window.location.href
+                }).catch(console.error);
+            } else {
+                // Clipboard API yoxdursa (HTTP) fallback istifadə edirik
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(fullText)
+                        .then(() => alert("Nəticə kopyalandı! Dostlarına göndərə bilərsən."))
+                        .catch(() => manualCopy(fullText));
+                } else {
+                    manualCopy(fullText);
+                }
+            }
+        }
+
+        function manualCopy(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                alert("Nəticə kopyalandı! Dostlarına göndərə bilərsən.");
+            } catch (err) {
+                prompt("Nəticəni kopyalayın:", text);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function downloadResultImage() {
+            const overlay = document.getElementById('win-overlay');
+            // Şəkil çəkilərkən düymələri gizlətmək istəyirsinizsə, burada CSS ilə oynamaq olar,
+            // amma olduğu kimi çəkmək daha təbiidir.
+            html2canvas(overlay, {
+                backgroundColor: window.getComputedStyle(overlay).backgroundColor // Fon rəngini qoruyur
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Sudoku_Netice_${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
         async function newGame() {
-            const response = await fetch('/new-board');
+            // Cari ölçüdə yeni oyun başladır
+            const size = initialBoard.length;
+            if (size === 16) {
+                maxHints = 2;
+            } else {
+                maxHints = 1;
+            }
+
+            const response = await fetch(`/new-board?size=${size}`);
             const data = await response.json();
             initialBoard = data.board;
             solutionBoard = data.solution;
             
             mistakes = 0;
             mistakesDisplay.innerText = "Səhvlər: 0 / 3";
+            score = 0;
+            document.getElementById('score').innerText = "Xal: 0";
+            
             historyStack = [];
             hintsUsed = 0;
             const hintBtn = document.getElementById('hint-btn');
+            hintBtn.innerText = `💡 ${maxHints}`;
+            hintBtn.disabled = false;
+            hintBtn.style.opacity = "1";
+            
+            clearInterval(timerInterval);
+            seconds = 0;
+            timerDisplay.innerText = "Vaxt: 00:00";
+            
+            isPaused = false;
+            document.getElementById('pause-overlay').style.display = 'none';
+            document.getElementById('win-overlay').style.display = 'none';
+            
+            // Mesaj qutusunu sıfırla
+            document.getElementById('win-message-input').disabled = false;
+            document.getElementById('win-message-input').value = "";
+            document.getElementById('win-message-input').placeholder = "Qurucuya ürək sözlərinizi yazın...";
+            document.getElementById('send-msg-btn').disabled = false;
+            document.getElementById('send-msg-btn').innerText = "💌 Göndər";
+            
+            startTimer();
+            drawBoard();
+        }
+
+        async function startDailyChallenge() {
+            const response = await fetch('/daily-challenge');
+            const data = await response.json();
+            maxHints = 1;
+            initialBoard = data.board;
+            solutionBoard = data.solution;
+            
+            mistakes = 0;
+            mistakesDisplay.innerText = "Səhvlər: 0 / 3";
+            score = 0;
+            document.getElementById('score').innerText = "Xal: 0";
+            
+            historyStack = [];
+            hintsUsed = 0;
+            const hintBtn = document.getElementById('hint-btn');
+            hintBtn.innerText = `💡 ${maxHints}`;
             hintBtn.disabled = false;
             hintBtn.style.opacity = "1";
             
@@ -536,28 +1296,40 @@
             isPaused = false;
             document.getElementById('pause-overlay').style.display = 'none';
             
+            // Mesaj qutusunu sıfırla
+            document.getElementById('win-message-input').disabled = false;
+            document.getElementById('win-message-input').value = "";
+            document.getElementById('win-message-input').placeholder = "Qurucuya ürək sözlərinizi yazın...";
+            document.getElementById('send-msg-btn').disabled = false;
+            document.getElementById('send-msg-btn').innerText = "💌 Göndər";
+
+            alert(`Gündəlik Tapşırıq (${data.date}) başladı!`);
             startTimer();
             drawBoard();
         }
 
         // --- Rəqəm Paneli Məntiqi ---
         function addNumberFromPad(num) {
-            if (selectedCell && !selectedCell.readOnly) {
+            if (selectedCell && !selectedCell.classList.contains('fixed')) {
                 selectedCell.value = num;
                 // Input hadisəsini əl ilə çağırırıq ki, yoxlama funksiyaları işləsin
                 selectedCell.dispatchEvent(new Event('input'));
-                selectedCell.focus(); // Fokus xanada qalsın
             }
         }
 
         function updateNumberPadVisibility() {
             // Hər rəqəmdən neçə dənə olduğunu sayırıq
-            let counts = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0};
+            let counts = {};
+            const size = initialBoard.length;
             
             document.querySelectorAll('.cell').forEach(cell => {
                 let val = parseInt(cell.value);
-                if (val >= 1 && val <= 9) {
-                    counts[val]++;
+                let r = parseInt(cell.dataset.row);
+                let c = parseInt(cell.dataset.col);
+
+                // Yalnız düzgün (həllə uyğun) rəqəmləri sayırıq ki, səhv yazılanlar düyməni gizlətməsin
+                if (val >= 1 && val <= size && val === solutionBoard[r][c]) {
+                    counts[val] = (counts[val] || 0) + 1;
                 }
             });
 
@@ -565,12 +1337,109 @@
             const buttons = document.querySelectorAll('.num-btn');
             buttons.forEach((btn, index) => {
                 let num = index + 1;
-                if (counts[num] >= 9) {
+                if ((counts[num] || 0) >= size) {
                     btn.classList.add('hidden');
                 } else {
                     btn.classList.remove('hidden');
                 }
             });
+        }
+
+        // Klaviatura dəstəyi (Desktop üçün)
+        document.addEventListener('keydown', function(e) {
+            // Əgər oyun dayandırılıbsa, xana seçilməyibsə və ya overlay açıqdırsa işləməsin
+            if (isPaused || !selectedCell || selectedCell.classList.contains('fixed')) return;
+            
+            // Overlay yoxlanışı
+            if (document.getElementById('start-overlay').style.display !== 'none') return;
+            if (document.getElementById('win-overlay').style.display === 'flex') return;
+            if (document.getElementById('pause-overlay').style.display === 'flex') return;
+            if (document.getElementById('tutorial-overlay').style.display === 'flex') return;
+            if (document.getElementById('history-overlay').style.display === 'flex') return;
+
+            // Rəqəmlər (1-9)
+            if (e.key >= '1' && e.key <= '9') {
+                selectedCell.value += e.key;
+                selectedCell.dispatchEvent(new Event('input'));
+            } 
+            // Silmə
+            else if (e.key === 'Backspace' || e.key === 'Delete') {
+                selectedCell.value = '';
+                selectedCell.dispatchEvent(new Event('input'));
+            }
+            // Ox düymələri ilə hərəkət
+            else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                let r = parseInt(selectedCell.dataset.row);
+                let c = parseInt(selectedCell.dataset.col);
+                const size = initialBoard.length;
+                if (e.key === 'ArrowUp') r = Math.max(0, r - 1);
+                if (e.key === 'ArrowDown') r = Math.min(size - 1, r + 1);
+                if (e.key === 'ArrowLeft') c = Math.max(0, c - 1);
+                if (e.key === 'ArrowRight') c = Math.min(size - 1, c + 1);
+                
+                const next = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+                if (next) next.click();
+            }
+        });
+
+        // --- Bug Report Functions ---
+        function openBugModal() {
+            document.getElementById('bug-overlay').style.display = 'flex';
+        }
+
+        function closeBugModal() {
+            document.getElementById('bug-overlay').style.display = 'none';
+        }
+
+        async function submitBugReport() {
+            const title = document.getElementById('bug-title').value;
+            const desc = document.getElementById('bug-desc').value;
+            const fileInput = document.getElementById('bug-image');
+            
+            if (!title.trim() || !desc.trim()) return alert("Zəhmət olmasa başlıq və təsviri yazın.");
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', desc);
+            if (fileInput.files[0]) {
+                formData.append('image', fileInput.files[0]);
+            }
+
+            await fetch('/report-bug', {
+                method: 'POST',
+                body: formData
+            });
+            
+            alert("Təşəkkürlər! Xəta bildirildi.");
+            document.getElementById('bug-title').value = "";
+            document.getElementById('bug-desc').value = "";
+            document.getElementById('bug-image').value = "";
+            closeBugModal();
+        }
+        
+        async function sendMessageToCreator() {
+            const msgInput = document.getElementById('win-message-input');
+            const sendBtn = document.getElementById('send-msg-btn');
+            const msg = msgInput.value;
+            
+            if (!msg.trim()) {
+                alert("Zəhmət olmasa mesajınızı yazın :)");
+                return;
+            }
+            
+            await fetch('/send-message', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ message: msg })
+            });
+            
+            alert("Mesajınız Togrul Yaqubluya çatdırıldı! Təşəkkürlər! ❤️");
+            msgInput.value = "";
+            msgInput.disabled = true;
+            msgInput.placeholder = "Mesajınız göndərildi.";
+            sendBtn.disabled = true;
+            sendBtn.innerText = "Göndərildi ✔";
         }
     </script>
 </body>
